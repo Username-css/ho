@@ -2,7 +2,6 @@ name: Runner
 
 on:
   workflow_dispatch:
-    
 
 jobs:
   run-ollama:
@@ -39,29 +38,32 @@ jobs:
           nohup ollama serve > /dev/null 2>&1 &
           sleep 3
           
-          ollama pull gemma:7b
+          ollama pull granite-code:3b
 
       - name: finish
         run: |
           nohup ./cloudflared tunnel --url http://127.0.0.1:11434 --http-host-header "localhost:11434" > cf.log 2>&1 &
           
           TUNNEL_URL=""
-          for i in {1..20}; do
-            sleep 2
+          for i in {1..25}; do
+            sleep 3
             TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' cf.log | tail -n 1)
             if [ -n "$TUNNEL_URL" ]; then
               break
             fi
           done
 
+          echo "Tunnel URL: $TUNNEL_URL"
           SERVER_ID="github_runner_${{ github.run_id }}"
 
           if [ -n "$TUNNEL_URL" ]; then
-            curl -s -X POST "${{ secrets.LUNES_HOST_URL }}/register" \
+            RESPONSE=$(curl -s -X POST "${{ secrets.LUNES_HOST_URL }}/register" \
               -H "Content-Type: application/json" \
               -H "x-api-key: ${{ secrets.WORKER_API_KEY }}" \
-              -d "{\"url\": \"$TUNNEL_URL\", \"provider\": \"github_runner\", \"serverId\": \"$SERVER_ID\"}" > /dev/null
+              -d "{\"url\": \"$TUNNEL_URL\", \"provider\": \"github_runner\", \"serverId\": \"$SERVER_ID\"}")
+            echo "Register Response: $RESPONSE"
           else
+            echo "Error: Tunnel URL not found!"
             exit 1
           fi
 
@@ -70,10 +72,11 @@ jobs:
           SERVER_ID="github_runner_${{ github.run_id }}"
           END_TIME=$(( $(date +%s) + 21300 ))
           while [ $(date +%s) -lt $END_TIME ]; do
-            curl -s -X POST "${{ secrets.LUNES_HOST_URL }}/ping" \
+            RESPONSE=$(curl -s -X POST "${{ secrets.LUNES_HOST_URL }}/ping" \
               -H "Content-Type: application/json" \
               -H "x-api-key: ${{ secrets.WORKER_API_KEY }}" \
-              -d "{\"serverId\": \"$SERVER_ID\"}" > /dev/null || true
+              -d "{\"serverId\": \"$SERVER_ID\"}")
+            echo "Ping Response: $RESPONSE"
             sleep 120
           done
 
