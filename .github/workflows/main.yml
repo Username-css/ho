@@ -38,8 +38,7 @@ jobs:
           nohup ollama serve > /dev/null 2>&1 &
           sleep 3
           
-          # Model
-          ollama pull dolphin-phi:2.7b
+          ollama pull starcoder2:3b
 
       - name: finish
         run: |
