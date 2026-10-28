@@ -38,7 +38,8 @@ jobs:
           nohup ollama serve > /dev/null 2>&1 &
           sleep 3
           
-          ollama pull granite-code:3b
+          # Model
+          ollama pull dolphin-phi:2.7b
 
       - name: finish
         run: |
